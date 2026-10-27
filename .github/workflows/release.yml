@@ -1,0 +1,120 @@
+name: Release plugin
+
+# Cutting a release:
+#   1. merge the verified `dev` work into `main` and set the new stable version in
+#      package.json + package-lock.json (no prerelease suffix) with its CHANGELOG.md entry;
+#   2. push to `main` (or run this workflow from `main` by hand).
+# Anything else - a dev checkout, a docs-only change, an already-tagged version - is skipped
+# by the guard step. The initial source snapshot never publishes a Release.
+on:
+  push:
+    branches: [main]
+    paths: [package.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    # workflow_dispatch can point at any branch; only main may publish.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:package
+
+      - name: Check that this version should be released
+        id: guard
+        env:
+          RELEASE_EVENT_NAME: ${{ github.event_name }}
+          RELEASE_BEFORE: ${{ github.event.before }}
+        run: |
+          version=$(node -p "require('./package.json').version")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          tag="v$version"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if node -e 'process.exit(/^\d+\.\d+\.\d+$/.test(process.argv[1]) ? 0 : 1)' "$version"; then
+            echo "stable version $version"
+          else
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::package.json version $version is not a stable x.y.z release; nothing to publish."
+            exit 0
+          fi
+          if [ "$version" = "0.0.0" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::package.json version is still the 0.0.0 placeholder; nothing to publish."
+            exit 0
+          fi
+          if [ "$RELEASE_EVENT_NAME" = "push" ]; then
+            if [ -z "$RELEASE_BEFORE" ] || [ "$RELEASE_BEFORE" = "0000000000000000000000000000000000000000" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::initial source push; no automatic Release."
+              exit 0
+            fi
+            previous=$(git show "${RELEASE_BEFORE}:package.json" | node -e 'let text=""; process.stdin.on("data", chunk => text += chunk); process.stdin.on("end", () => console.log(JSON.parse(text).version))')
+            if [ "$previous" = "$version" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              echo "::notice::version unchanged; nothing to publish."
+              exit 0
+            fi
+          fi
+          # 0 = tag already on the remote, 2 = no such tag; anything else is a real error
+          # (network, credentials) and must fail loudly instead of publishing a duplicate.
+          status=0
+          git ls-remote --exit-code --tags origin "refs/tags/$tag" >/dev/null 2>&1 || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::tag $tag already exists; $version was released before."
+            exit 0
+          elif [ "$status" -ne 2 ]; then
+            echo "::error::could not check tag $tag on origin (git ls-remote exit $status)."
+            exit 1
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - name: Pack installable tarball
+        id: pack
+        if: steps.guard.outputs.skip == 'false'
+        run: |
+          # dist/ was already built and checked above; do not rebuild inside pack.
+          tarball=$(npm pack --ignore-scripts --pack-destination . | tail -n 1)
+          sha256=$(sha256sum "$tarball" | cut -d ' ' -f 1)
+          echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
+          echo "sha256=$sha256" >> "$GITHUB_OUTPUT"
+          echo "Packed $tarball ($sha256)"
+
+      - name: Create tag and GitHub Release
+        if: steps.guard.outputs.skip == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.guard.outputs.tag }}
+          TARBALL: ${{ steps.pack.outputs.tarball }}
+          SHA256: ${{ steps.pack.outputs.sha256 }}
+        run: |
+          gh auth setup-git
+          git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' tag -a "$TAG" -m "BranchNest for DSH $TAG"
+          git push origin "refs/tags/$TAG"
+          cat > release-notes.md <<EOF
+          Installable package: \`$TARBALL\` (sha256 \`$SHA256\`).
+
+          See [CHANGELOG.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/CHANGELOG.md) for what changed in this version.
+          Installation and compatibility notes: [README.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/README.md).
+          EOF
+          gh release create "$TAG" "$TARBALL" --title "BranchNest for DSH ${TAG#v}" --notes-file release-notes.md

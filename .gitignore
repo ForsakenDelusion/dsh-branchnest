@@ -1,0 +1,71 @@
+# ── Dependencies ─────────────────────────────────────────────
+node_modules/
+.pnpm-store/
+.npm-cache/
+.yarn/cache/
+.yarn/install-state.gz
+
+# ── Build output ─────────────────────────────────────────────
+dist/
+out/
+build/
+coverage/
+*.tsbuildinfo
+
+# ── Packaged plugin, smoke runs and local release artifacts ──
+artifacts/
+*.tgz
+*.tar.gz
+*.zip
+*.log
+logs/
+
+# ── Local DSH profiles, generated homes and device state ─────
+.dev-home/
+.dsh-home/
+profiles/
+*.local
+*.local.*
+settings.local.*
+.npmrc
+!.npmrc.example
+
+# ── Promo / video production workspace (internal) ────────────
+promo/
+docs/marketing/*promo*
+docs/marketing/*.mp4
+docs/marketing/*.mov
+docs/marketing/*.webm
+docs/marketing/*.wav
+docs/marketing/*.mp3
+docs/marketing/frames/
+docs/marketing/out/
+
+# ── Internal archive (not published) ─────────────────────────
+_archive/
+
+# ── Secrets and credentials ──────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*
+secrets*
+*.secrets
+
+# ── OS / editor and temporary files ──────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+tmp/
+temp/
+.tmp/
+*.tmp
+.cache/

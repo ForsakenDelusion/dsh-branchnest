@@ -1,0 +1,25 @@
+{
+  "screenshots": [
+    {
+      "path": "docs/assets/canvas.png",
+      "caption": {
+        "zh": "画布总览：项目里的每个对话是一张卡片，分支和上下文引用连成一张图。",
+        "en": "Canvas overview: every session in the project is a card, with branches and context links drawn as a graph."
+      }
+    },
+    {
+      "path": "docs/assets/reader.png",
+      "caption": {
+        "zh": "阅读页：像读文档一样顺着分支读完一个会话，随时跳回上下文。",
+        "en": "Reader view: read a session like a document, follow branches, and jump back to the source turn."
+      }
+    },
+    {
+      "path": "docs/assets/composer.png",
+      "caption": {
+        "zh": "新建输入器：复用 DSH 原生输入器，附件、技能、引用、模型和权限都照常可用。",
+        "en": "New-session composer: the native DSH composer, with attachments, skills, references, model and permissions intact."
+      }
+    }
+  ]
+}

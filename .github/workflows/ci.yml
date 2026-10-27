@@ -1,0 +1,55 @@
+name: Check plugin
+
+# Checks only: pull requests and every branch push. Releases live in release.yml and are
+# driven by `main` alone, so a dev branch push never publishes anything.
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      matrix:
+        node: ['22.18.0', '24']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: npm run check:package
+      - run: npm audit --omit=dev --audit-level=high
+
+  dev-package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.18.0'
+          cache: npm
+      - run: npm ci --legacy-peer-deps
+      - run: npm run dev:pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dev-package
+          path: artifacts/*.tgz
+          retention-days: 7

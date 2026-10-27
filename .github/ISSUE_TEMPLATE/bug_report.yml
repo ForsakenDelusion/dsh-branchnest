@@ -1,0 +1,97 @@
+name: Bug report
+description: Report a reproducible problem with BranchNest for DSH (画布、分支、阅读页、输入器等).
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. BranchNest runs inside DeepSeek Harness Desktop, so the harness
+        version matters as much as the plugin version — the supported baseline is
+        **DSH Desktop 0.2.1-rc.3** (`engines.dsh` in `package.json`). Please fill in both versions
+        and keep screenshots free of private conversations when you can.
+
+  - type: input
+    id: dsh-version
+    attributes:
+      label: DSH Desktop version
+      description: The harness version BranchNest is running in (Help → About, or the launcher's version string). The baseline is 0.2.1-rc.3.
+      placeholder: 0.2.1-rc.3
+    validations:
+      required: true
+
+  - type: input
+    id: plugin-version
+    attributes:
+      label: BranchNest plugin version
+      description: From the installed profile's node_modules/dsh-branchnest/package.json, or from the file name of the .tgz you installed (dev builds look like 0.4.4-dev.1793026634629).
+      placeholder: 0.4.4
+    validations:
+      required: true
+
+  - type: dropdown
+    id: build
+    attributes:
+      label: Build type
+      description: Dev builds carry a version like `0.4.4-dev.<build>` and come from `npm run dev:pack`; release builds are the tagged GitHub Release tarball.
+      options:
+        - Release build (tagged GitHub Release)
+        - Dev build (local `npm run dev:pack`, version ends in -dev.<build>)
+        - Built from source (git checkout + `npm run build`)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - macOS (Apple silicon)
+        - macOS (Intel)
+        - Windows 11
+        - Windows 10
+        - Linux (X11)
+        - Linux (Wayland)
+        - Other (describe in the steps)
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered, starting from a fresh window. Say which project/session was open and what you clicked or typed.
+      placeholder: |
+        1. Open project "…" on the canvas
+        2. Select a paragraph in a session card and pick "Go deeper"
+        3. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: What happened instead. Include error text from the DevTools console or the launcher log if there is any.
+    validations:
+      required: true
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots or recording
+      description: Drag images or a short screen recording here. Blur private titles and messages.
+      placeholder: Drag files here.
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Other plugins installed, recent updates, display scaling, or whether it reproduces after restarting the harness.
